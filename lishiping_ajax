@@ -1,0 +1,53 @@
+import requests
+import re
+import time
+
+# 除去直播和文章页面,剩余以下页面,其中 categoryId= 值非从小到大,start= 为页面显示数据,默认显示12个
+list_ = [
+'https://www.pearvideo.com/category_loading.jsp?reqType=5&categoryId=10&start={}',
+'https://www.pearvideo.com/category_loading.jsp?reqType=5&categoryId=1&start={}',
+'https://www.pearvideo.com/category_loading.jsp?reqType=5&categoryId=2&start={}',
+'https://www.pearvideo.com/category_loading.jsp?reqType=5&categoryId=9&start={}',
+'https://www.pearvideo.com/category_loading.jsp?reqType=5&categoryId=5&start={}',
+'https://www.pearvideo.com/category_loading.jsp?reqType=5&categoryId=8&start={}',
+'https://www.pearvideo.com/category_loading.jsp?reqType=5&categoryId=4&start={}',
+'https://www.pearvideo.com/category_loading.jsp?reqType=5&categoryId=3&start={}',
+'https://www.pearvideo.com/category_loading.jsp?reqType=5&categoryId=31&start={}',
+'https://www.pearvideo.com/category_loading.jsp?reqType=5&categoryId=6&start={}',
+'https://www.pearvideo.com/category_loading.jsp?reqType=5&categoryId=59&start={}',
+'https://www.pearvideo.com/category_loading.jsp?reqType=14&categoryId=&start={}']
+
+# 某些页面具体数据不统一,给个默认数据(1024-12)1012
+for i in range(0,1024,12):
+    for urls in list_:
+        res = requests.get(urls.format(i)).content.decode()
+        if '没有更多内容' in res:
+            break
+        # 只抓取视频video_xxxx,不抓取直播live_xxxx
+        list_url = re.findall('<a href="video_(.*?)"',res)
+
+        for urls in list_url:
+            url = 'https://www.pearvideo.com/video_'+urls
+
+            res = requests.get(url).content.decode()
+
+            title = re.findall('<h1 class="video-tt">(.*?)</h1>',res)[0]
+            video_url = re.findall('srcUrl="(.*?)"',res)[0]
+
+            # 替换抓取下来的tilte中的?!",不然抛出异常
+            if "!" in title:
+                title = title.replace("!","")
+            if "?" in title:
+                title = title.replace("?","")
+            if '"' in title:
+                title = title.replace('"',"")
+
+            try:
+                r = requests.get(video_url).content
+                with open(title+video_url[-4:],'wb')as f:
+                    f.write(r)
+            except:
+                pass
+            print(title)
+
+            time.sleep(2)
